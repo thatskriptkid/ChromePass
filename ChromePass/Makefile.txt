@@ -1,0 +1,23 @@
+CC=cl.exe
+CCFLAGS=/nologo /W1 /c /MT
+
+LNK=link.exe
+LDFLAGS=/nologo
+
+all : ChromePassDecryptor
+
+ChromePassDecryptor: ChromePass sqlite3
+        $(LNK) $(LDFLAGS) /out:.\$@.exe  $*.obj sqlite3.obj
+
+
+ChromePass: ChromePassDecryptor.obj
+	$(CC) $(CCFLAGS) /c ChromePassDecryptor.c
+
+sqlite3: sqlite3.obj
+	$(CC) $(CCFLAGS) /c sqlite/sqlite3.c
+
+clean:
+        del *.obj 
+         
+cleanall:
+        del $(OUTPUT_DIR)\*.exe *.obj 

