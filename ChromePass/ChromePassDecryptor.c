@@ -89,21 +89,8 @@ static int process_row(void *passed_db, int argc, char **argv, char **col_name) 
 	int result;
 	int blob_size;
 	int i;
-again:
-	result = sqlite3_blob_open(db, "main", "logins", "password_value", row_id, 0, &blob);
-	if (result != SQLITE_OK) {
-		/* entries can have row_id not in order (1,2,3, ...)
-		   Yes, it is nasty trick but works
-		 */
-		if (row_id <= ROW_ID_COUNT) {
-			row_id++;
-			goto again;
-		}
-		fprintf(stderr, "sqlite3_blob_open() -> %s\n", sqlite3_errstr(result));
-		goto out_db;
-	}
-
-	row_id++;
+	
+	while (sqlite3_blob_open(db, "main", "logins", "password_value", row_id++, 0, &blob) != SQLITE_OK && row_id <= ROW_ID_COUNT);
 
 	blob_size = sqlite3_blob_bytes(blob);
 
