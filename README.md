@@ -1,4 +1,4 @@
-*THIS CODE DOESNT WORK IN NEW CHROME VERSION (90)*
+*THIS CODE DOESNT WORK IN NEW CHROME VERSION (90). Please refer https://github.com/0xfd3/Chrome-Password-Recovery* 
 
 Dump Google Chrome database data and save url,username,decrypted password (plain text) in txt file. 
 Tested on Google Chrome Version 67.0.3396.62 (Official Build) (64-bit).
